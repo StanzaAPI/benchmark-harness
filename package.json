@@ -9,6 +9,7 @@
     "node": ">=23"
   },
   "scripts": {
+    "build": "tsc -p tsconfig.json",
     "generate": "node bin/generate.mjs",
     "generate:full": "node bin/generate.mjs --transactions 250000 --claims 4 --out data/claims.x12",
     "bench": "node --experimental-transform-types --max-old-space-size=25 bin/run.mjs",
