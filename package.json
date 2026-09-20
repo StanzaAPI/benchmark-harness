@@ -4,7 +4,7 @@
   "private": false,
   "type": "module",
   "description": "Reproducible benchmark for the Stanza zero-regex X12/NDJSON streaming parser",
-  "license": "MIT",
+  "license": "BSL-1.1",
   "engines": {
     "node": ">=23"
   },

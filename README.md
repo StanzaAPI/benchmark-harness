@@ -74,4 +74,9 @@ your own machine.
 
 ## License
 
-MIT
+Source-available under the [Business Source License 1.1](LICENSE): read, run,
+modify, and benchmark this parser freely for non-production use. Offering it, or
+a derivative, as a hosted or embedded service that competes with
+[Stanza API](https://stanzaapi.com) requires a commercial license
+(licensing@stanzaapi.com). Each version converts to Apache 2.0 four years after
+publication.
