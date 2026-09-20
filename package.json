@@ -1,0 +1,22 @@
+{
+  "name": "stanza-benchmark-harness",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "description": "Reproducible benchmark for the Stanza zero-regex X12/NDJSON streaming parser",
+  "license": "MIT",
+  "engines": {
+    "node": ">=23"
+  },
+  "scripts": {
+    "generate": "node bin/generate.mjs",
+    "generate:full": "node bin/generate.mjs --transactions 250000 --claims 4 --out data/claims.x12",
+    "bench": "node --experimental-transform-types --max-old-space-size=25 bin/run.mjs",
+    "smoke": "node bin/generate.mjs --transactions 2000 --claims 4 --out data/smoke.x12 && node --experimental-transform-types --max-old-space-size=25 bin/run.mjs data/smoke.x12"
+  },
+  "dependencies": {
+    "@types/node": "^22.20.4",
+    "typescript": "^5.9.3",
+    "zod": "^4.6.5"
+  }
+}
