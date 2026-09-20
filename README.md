@@ -62,6 +62,12 @@ Notes on the memory column:
 Throughput varies with CPU and Node version. Run the commands above to measure
 your own machine.
 
+## Comparison
+
+See [COMPARISON.md](COMPARISON.md) for a head-to-head against `node-x12` and
+`x12-parser` under the same workload and memory cap, plus an honest feature
+matrix and the parser's known drawbacks.
+
 ## Design notes
 
 - The parser is copied verbatim from the production implementation:

@@ -42,7 +42,7 @@ const ICD10 = ['I10', 'E119', 'M5450', 'J069', 'R079', 'Z0000'];
 const CPT = ['99213', '99214', '99215', '99385', '99395'];
 
 const isa = (ctrl) =>
-  `ISA*00*          *00*          *ZZ*${pad('SYNTHSUB', 15)}*ZZ*${pad('SYNTHRCV', 15)}*260101*1200*^*00501*${digits(9)}*0*P*:~`;
+  `ISA*00*          *00*          *ZZ*${pad('SYNTHSUB', 15)}*ZZ*${pad('SYNTHRCV', 15)}*260101*1200*^*00501*${pad(String(ctrl % 1e9), 9, '0')}*0*P*:~`;
 const gs = (ctrl) => `GS*HC*SYNTHSUB*SYNTHRCV*20260101*1200*${ctrl}*X*005010X222A1~`;
 
 function claimSegmentGroup(hlIndex) {
@@ -71,8 +71,11 @@ function claimSegmentGroup(hlIndex) {
 }
 
 function transaction(ctrl) {
+  // ST02 and SE02 must carry the same transaction control number; strict
+  // parsers reject the file otherwise.
+  const transactionControl = digits(4);
   const segments = [
-    `ST*837*${digits(4)}*005010X222A1~`,
+    `ST*837*${transactionControl}*005010X222A1~`,
     `BHT*0019*00*${digits(6)}*20260101*1200*CH~`,
     `NM1*41*2*SYNTHETIC BILLING*****46*${digits(6)}~`,
     `PER*IC*SYNTH CONTACT*TE*${digits(10)}~`,
@@ -90,9 +93,9 @@ function transaction(ctrl) {
   const seCount = segments.length + 1; // ST..SE inclusive
   return [
     ...segments,
-    `SE*${seCount}*${digits(4)}~`,
+    `SE*${seCount}*${transactionControl}~`,
     `GE*1*${ctrl}~`,
-    `IEA*1*${digits(9)}~`,
+    `IEA*1*${pad(String(ctrl % 1e9), 9, '0')}~`,
   ];
 }
 
