@@ -20,7 +20,21 @@ information (PHI) or customer data is used, stored, or required.
 
 ## Reproduce
 
-Requires Node >= 23.
+With Nix there is nothing to install. The flake builds `node_modules` and
+`dist/` from the lockfile, so the apps run without `npm install` and without
+network.
+
+```bash
+# from anywhere, no checkout: generate ~5 MB and run it under the cap
+nix run github:StanzaAPI/benchmark-harness#smoke
+
+# full run from a checkout
+nix run .#generate -- --transactions 255000 --claims 5 --out data/claims.x12
+nix run .#bench    -- data/claims.x12
+nix run .#compare  -- --file data/claims.x12 --cap 25
+```
+
+`nix run .#help` lists every command. Without Nix, requires Node >= 23:
 
 ```bash
 npm install
@@ -36,7 +50,8 @@ node --max-old-space-size=25 bin/run.mjs data/claims.x12
 Quick check on ~5 MB instead:
 
 ```bash
-npm run smoke
+nix run .#smoke     # with Nix
+npm run smoke       # without
 ```
 
 ## Reference results
