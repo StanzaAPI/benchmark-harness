@@ -4,6 +4,25 @@ Reproducible benchmark for the zero-regex X12 streaming parser that powers
 [Stanza API](https://stanzaapi.com). It measures throughput and V8 memory
 behavior on large synthetic healthcare claim batches.
 
+**One file, 500.5 MB, 255,000 claim transactions, 14.2 s inside a hard 25 MB V8
+old-space cap.** Under the same cap `node-x12` takes 49% longer and
+`x12-parser` ends up 2.7x slower; uncapped, `node-x12` ties this parser at 13.4
+s against 13.6 s. Read [WRITEUP.md](WRITEUP.md) for what the numbers do and do
+not prove, and [COMPARISON.md](COMPARISON.md) for the full head-to-head.
+
+```mermaid
+flowchart LR
+    G["bin/generate.mjs<br/>seeded 837P corpus"] --> F["data/claims.x12<br/>500.5 MB, 255,000 transactions"]
+    F --> R["bin/run.mjs<br/>node --max-old-space-size=25"]
+    R --> T["char-DFA tokenizer<br/>no regex"]
+    T --> P["837 / 835 / 271 parser<br/>transaction FSM"]
+    P --> O["typed frames<br/>one per transaction"]
+    O --> D["consumer / discard"]
+    F --> C["bin/compare.mjs"]
+    C --> N["node-x12 (lax)"]
+    C --> X["x12-parser"]
+```
+
 All data is generated locally and is entirely synthetic. No protected health
 information (PHI) or customer data is used, stored, or required.
 
@@ -32,6 +51,9 @@ nix run github:StanzaAPI/benchmark-harness#smoke
 nix run .#generate -- --transactions 255000 --claims 5 --out data/claims.x12
 nix run .#bench    -- data/claims.x12
 nix run .#compare  -- --file data/claims.x12 --cap 25
+
+# or all of the above in order
+make bench
 ```
 
 `nix run .#help` lists every command. Without Nix, requires Node >= 23:

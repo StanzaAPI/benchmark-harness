@@ -145,7 +145,7 @@
 
       devShells = forAllSystems (pkgs: {
         default = pkgs.mkShell {
-          packages = [ pkgs.nodejs ];
+          packages = [ pkgs.nodejs pkgs.gnumake ];
         };
       });
 
