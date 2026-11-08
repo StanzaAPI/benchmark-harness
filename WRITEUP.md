@@ -3,12 +3,10 @@
 A 500.5 MB X12 file, 255,000 healthcare claim transactions, parsed in **14.2
 seconds inside a hard 25 MB V8 old-space cap**. Under the same cap, the two
 established Node X12 libraries slow down: **node-x12 by 49% in wall time,
-x12-parser by 21%**. The parser this harness exists for pays 6% against its own
-uncapped run.
+x12-parser by 21%**. This parser pays 6% against its own uncapped run.
 
-That is the result worth publishing. The uncapped benchmark is a tie, and the
-memory ceiling is the constraint that actually breaks streaming code in
-serverless and edge runtimes.
+Uncapped, Stanza and node-x12 tie at 13.4 s and 13.6 s. The memory ceiling is
+the constraint that breaks streaming code in serverless and edge runtimes.
 
 Full tables, fairness notes, and the feature matrix: [`COMPARISON.md`](COMPARISON.md).
 
@@ -50,31 +48,28 @@ Uncapped, with V8 free to use memory:
 | node-x12 | 13.6 s | 35.4 MB |
 | x12-parser | 32.3 s | 32.9 MB |
 
-## What the numbers say
+## Reading the results
 
-**Uncapped, it is a tie.** Stanza parses in 13.4 s, node-x12 in 13.6 s. Anyone
-claiming a raw speed win over node-x12 is overclaiming, and the harness is
-public so the claim would not survive a re-run.
+Uncapped, the two parsers tie: 13.4 s against 13.6 s. A raw speed claim over
+node-x12 would not survive a re-run of this harness.
 
-**The cap is where the designs separate.** node-x12 goes from 13.6 s to 20.3 s
-(+49%). x12-parser goes from 32.3 s to 39.2 s (+21%) and ends up 2.7x slower
-than Stanza under the cap. Stanza goes from 13.4 s to 14.2 s (+6%). A hard
-ceiling does not change the amount of parsing work; it changes how much of that
-work can be buffered, and that is where a streaming design pays for itself.
+Under the cap, node-x12 goes from 13.6 s to 20.3 s (+49%), x12-parser from
+32.3 s to 39.2 s (+21%), and Stanza from 13.4 s to 14.2 s (+6%). A hard ceiling
+does not change the parsing work; it changes how much of that work can be
+buffered, and a streaming design pays for itself there.
 
-**The sampled heap is not the cap.** node-x12 samples 26.2 MB and x12-parser
-32.8 MB while both finish. `--max-old-space-size=25` bounds old space; the
-sampled `heapUsed` includes the young generation and moves with GC timing. A
-sampled peak above 25 MB does not mean a run exceeded the cap. Both libraries
-complete under it, slower. The one that fails is node-x12 in *strict* mode, and
-it fails on a valid file, not on memory.
+A sampled heap above 25 MB is not a breach. node-x12 samples 26.2 MB and
+x12-parser 32.8 MB while both finish. `--max-old-space-size=25` bounds old
+space; the sampled `heapUsed` includes the young generation and moves with GC
+timing. Both libraries complete under the cap, slower. node-x12 in *strict*
+mode fails on a valid file, not on memory.
 
-**Object count is the other half.** Stanza emits 255,001 parsed transaction
-frames. The libraries emit 20,655,000 raw segment objects for the consumer to
-interpret: 81x more objects, and none of them know what a claim is. The parser
-does more work per record and hands the consumer less.
+Stanza emits 255,001 parsed transaction frames. The libraries emit 20,655,000
+raw segment objects for the consumer to interpret, 81x more, and none of them
+know what a claim is. The parser does more work per record and hands the
+consumer less.
 
-**Strict mode is broken in node-x12.** Used as documented, it throws
+node-x12 strict mode fails on a valid file. Used as documented, it throws
 `An EDI document must contain at least one functional group` on a well-formed
 single-envelope file, because the stream path validates an interchange model it
 never built. The comparison uses lax mode and publishes the reproduction
@@ -82,10 +77,10 @@ command.
 
 ## What this does not prove
 
-- It is not a "fastest parser" claim. Uncapped, the two leading libraries tie.
+- This is not a fastest-parser result: uncapped, the two leading libraries tie.
 - The parsers do different work. Stanza maps 837P claims into typed frames with
-  SNIP element checks; the libraries build generic segment trees. More work,
-  fewer objects, same or better speed is the fair claim.
+  SNIP element checks; the libraries build generic segment trees. Stanza does
+  more work per record, emits fewer objects, and holds the same or better speed.
 - The corpus is synthetic and single-machine. It is reproducible, not
   independently replicated.
 - The parser's own gap is in the record: it does not validate ST02/SE02
