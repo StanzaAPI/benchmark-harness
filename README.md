@@ -1,14 +1,16 @@
 # Stanza Streaming Parser Benchmark
 
-Reproducible benchmark for the zero-regex X12 streaming parser that powers
-[Stanza API](https://stanzaapi.com). It measures throughput and V8 memory
-behavior on large synthetic healthcare claim batches.
+Reproducible benchmark for the zero-regex X12 streaming parser behind
+[Stanza API](https://stanzaapi.com). It measures throughput and V8 memory on
+large synthetic healthcare claim batches.
 
-One file, 500.5 MB, 255,000 transactions: 14.2 s inside a hard 25 MB V8
-old-space cap. Under the same cap, `node-x12` takes 20.3 s (49% longer than its
-uncapped run) and `x12-parser` takes 39.2 s. Uncapped, `node-x12` ties this
-parser at 13.6 s against 13.4 s. [WRITEUP.md](WRITEUP.md) covers the method and
-caveats; [COMPARISON.md](COMPARISON.md) has the full head-to-head.
+One file, 500.5 MB, 255,000 transactions: **14.2 s inside a hard 25 MB V8
+old-space cap**. Under the same cap, `node-x12` takes 20.3 s (49% longer than
+its uncapped run) and `x12-parser` takes 39.2 s. Uncapped, `node-x12` ties this
+parser at 13.6 s against 13.4 s.
+
+[WRITEUP.md](WRITEUP.md) covers the method and caveats.
+[COMPARISON.md](COMPARISON.md) has the full head-to-head.
 
 ```mermaid
 flowchart LR
@@ -23,63 +25,48 @@ flowchart LR
     C --> X["x12-parser"]
 ```
 
-All data is generated locally and is synthetic. No PHI or customer data is
-used.
+All data is generated locally and is synthetic. No PHI or customer data is used.
 
 ## What is measured
 
-- **Wall time** to stream a single X12 file through `iterateX12StreamFrames`,
-  the NDJSON-emitting streaming path used in production.
-- **Peak sampled V8 heap** (`process.memoryUsage().heapUsed`, sampled every
-  25ms) and whether the run completes under a hard
-  `--max-old-space-size=25` old-space cap.
-- **Record throughput**: one record is one X12 transaction (`ST`..`SE` block),
-  parsed into a frame and discarded. The benchmark measures parsing, not
-  retention.
+- **Wall time** to stream one X12 file through `iterateX12StreamFrames`, the
+  NDJSON streaming path used in production.
+- **Peak sampled V8 heap** (`process.memoryUsage().heapUsed`, every 25 ms) and
+  whether the run completes under `--max-old-space-size=25`.
+- **Record throughput**: one record is one X12 transaction (`ST`..`SE`), parsed
+  into a frame and discarded. This measures parsing, not retention.
 
 ## Reproduce
 
 With Nix there is nothing to install. The flake builds `node_modules` and
-`dist/` from the lockfile, so the apps run without `npm install` and without
-network.
+`dist/` from the lockfile.
 
 ```bash
-# from anywhere, no checkout: generate ~5 MB and run it under the cap
+# From anywhere, no checkout: generate ~5 MB and run under the cap.
 nix run github:StanzaAPI/benchmark-harness#smoke
 
-# full run from a checkout
+# Full run from a checkout.
 nix run .#generate -- --transactions 255000 --claims 5 --out data/claims.x12
 nix run .#bench    -- data/claims.x12
 nix run .#compare  -- --file data/claims.x12 --cap 25
 
-# or all of the above in order
+# Or all of the above.
 make bench
 ```
 
-`nix run .#help` lists every command. Without Nix, requires Node >= 23:
+Without Nix, requires Node >= 23:
 
 ```bash
 npm install
 npm run build
-
-# ~500 MB, 255k transactions, ~2 KB per record
 node bin/generate.mjs --transactions 255000 --claims 5 --out data/claims.x12
-
-# Hard 25 MB old-space cap
 node --max-old-space-size=25 bin/run.mjs data/claims.x12
-```
-
-Quick check on ~5 MB instead:
-
-```bash
-nix run .#smoke     # with Nix
-npm run smoke       # without
 ```
 
 ## Reference results
 
-Hardware: Intel Core i7-10700K @ 3.80GHz, 31 GiB RAM, Linux 7.2.5, Node v26.8.2.
-Synthetic file: 500.5 MB (477.3 MiB), 255,000 transactions, 1,963 bytes/record.
+Hardware: Intel Core i7-10700K @ 3.80 GHz, 31 GiB RAM, Linux 7.2.5, Node
+v26.8.2. Synthetic file: 500.5 MB, 255,000 transactions, 1,963 bytes/record.
 
 | Run | Wall time | Records/s | MiB/s | Peak `heapUsed` | Under 25 MB cap |
 | :-- | :-- | :-- | :-- | :-- | :-- |
@@ -87,39 +74,30 @@ Synthetic file: 500.5 MB (477.3 MiB), 255,000 transactions, 1,963 bytes/record.
 | 2 | 14.38 s | 17,729 | 32.8 | 20.7 MB | yes |
 | smoke (5 MB) | 0.12 s | 16,468 | 26.2 | 7.9 MB | yes |
 
-Notes on the memory column:
-
-- The hard constraint is the `--max-old-space-size=25` cap: a run that exceeds
-  it aborts. Both full runs completed.
-- Sampled `heapUsed` includes the young generation and is GC-timing dependent,
-  which is why run 1 shows 31.6 MB while still finishing under the cap.
-- `rss` is around 140 MB, dominated by the stream buffers and Node baseline,
-  not by parser allocations.
+The hard constraint is the old-space cap: a run that exceeds it aborts. Both
+full runs completed. Sampled `heapUsed` includes the young generation and
+depends on GC timing, which is why run 1 shows 31.6 MB while still finishing
+under the cap. RSS is around 140 MB, dominated by stream buffers and Node
+baseline.
 
 Throughput varies with CPU and Node version. Run the commands above to measure
 your own machine.
 
-## Comparison
-
-See [COMPARISON.md](COMPARISON.md) for a head-to-head against `node-x12` and
-`x12-parser` under the same workload and memory cap, plus a feature matrix and
-known drawbacks.
-
 ## Design notes
 
-- The parser is copied verbatim from the production implementation:
-  `tokenizer.ts`, `parser837/835/271.ts`, `stream.ts`, plus their types. The
-  only change is that the HTTP/routes layer is omitted.
-- `DEFAULT_MAX_STREAM_RECORDS` is 50,000. Batches larger than that require
-  passing `maxRecords` explicitly; this harness passes a high ceiling.
-- The tokenizer contains no regular expressions (see `tokenizer.ts`); segment
-  and element splitting is done with character indexing only.
+- The parser is copied verbatim from production: `tokenizer.ts`,
+  `parser837/835/271.ts`, `stream.ts`, and their types. The HTTP/routes layer is
+  omitted.
+- `DEFAULT_MAX_STREAM_RECORDS` is 50,000. Larger batches must pass
+  `maxRecords`; this harness does.
+- The tokenizer contains no regular expressions; segment and element splitting
+  use character indexing only.
 
 ## License
 
 Source-available under the [Business Source License 1.1](LICENSE): read, run,
-modify, and benchmark this parser freely for non-production use. Offering it, or
-a derivative, as a hosted or embedded service that competes with
+modify, and benchmark this parser for non-production use. Offering it, or a
+derivative, as a hosted or embedded service that competes with
 [Stanza API](https://stanzaapi.com) requires a commercial license
 (licensing@stanzaapi.com). Each version converts to Apache 2.0 four years after
 publication.
