@@ -4,11 +4,11 @@ Reproducible benchmark for the zero-regex X12 streaming parser that powers
 [Stanza API](https://stanzaapi.com). It measures throughput and V8 memory
 behavior on large synthetic healthcare claim batches.
 
-**One file, 500.5 MB, 255,000 claim transactions, 14.2 s inside a hard 25 MB V8
-old-space cap.** Under the same cap `node-x12` takes 49% longer and
-`x12-parser` ends up 2.7x slower; uncapped, `node-x12` ties this parser at 13.4
-s against 13.6 s. Read [WRITEUP.md](WRITEUP.md) for what the numbers do and do
-not prove, and [COMPARISON.md](COMPARISON.md) for the full head-to-head.
+One file, 500.5 MB, 255,000 transactions: 14.2 s inside a hard 25 MB V8
+old-space cap. Under the same cap, `node-x12` takes 20.3 s (49% longer than its
+uncapped run) and `x12-parser` takes 39.2 s. Uncapped, `node-x12` ties this
+parser at 13.6 s against 13.4 s. [WRITEUP.md](WRITEUP.md) covers the method and
+caveats; [COMPARISON.md](COMPARISON.md) has the full head-to-head.
 
 ```mermaid
 flowchart LR
@@ -23,8 +23,8 @@ flowchart LR
     C --> X["x12-parser"]
 ```
 
-All data is generated locally and is entirely synthetic. No protected health
-information (PHI) or customer data is used, stored, or required.
+All data is generated locally and is synthetic. No PHI or customer data is
+used.
 
 ## What is measured
 
@@ -102,8 +102,8 @@ your own machine.
 ## Comparison
 
 See [COMPARISON.md](COMPARISON.md) for a head-to-head against `node-x12` and
-`x12-parser` under the same workload and memory cap, plus an honest feature
-matrix and the parser's known drawbacks.
+`x12-parser` under the same workload and memory cap, plus a feature matrix and
+known drawbacks.
 
 ## Design notes
 
